@@ -74,11 +74,12 @@ def handle_messages(message):
         else:
             return None
             
-    elif text.lower() == '/sflie@klankazna_bot' or '/sfile':
+    elif text.lower() == '/sflie':
     	if is_admin(message):
     		send_data_file(message)
     else:
-     	return None     			                                                                                            
+     	return None  
+        
 def is_admin(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
