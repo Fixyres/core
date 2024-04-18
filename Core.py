@@ -1,10 +1,9 @@
 import telebot
-import time
 from datetime import datetime
 import pytz
 import os
 
-TOKEN = ''
+TOKEN = '6775251060:AAGDYK6eTq70hHX5NVMCSMGmVoNXorZKINY'
 bot = telebot.TeleBot(TOKEN)
 
 moscow_tz = pytz.timezone('Europe/Moscow')
@@ -17,14 +16,20 @@ def handle_kazna(message):
         with open(chat_data_file, 'r') as f:
             lines = f.readlines()
             if lines:
-                response = "\n"
-                line_number = 1  
+                user_data = []  
                 for line in lines:
+                    user_info = line.strip().split(',')
+                    money = float(user_info[2])
+                    user_data.append((money, line))  
+                user_data.sort(reverse=True)
+                response = "\n"
+                line_number = 1
+                for money, line in user_data:  
                     user_id, username, money, date_time, message_id = line.strip().split(',')
                     chat_id_clean = str(chat_id)[4:]
                     message_link = f'<a href="https://t.me/c/{chat_id_clean}/{abs(int(message_id))}">{username}</a>'
                     response += f"{line_number}) {message_link} - {money} - {date_time}\n"
-                    line_number += 1  
+                    line_number += 1
             else:
                 response = "..."
         bot.send_message(message.chat.id, response, parse_mode='HTML')
@@ -43,16 +48,20 @@ def handle_messages(message):
     if text.lower().startswith('клан казна'):
         handle_clan_kazna(message)
     elif text.lower().endswith('казна'):
-        if is_admin(message):
-            handle_kazna(message)
-        else:
-            return None
+    	handle_kazna(message)
+
     elif text.lower() == '/clean':
         if is_admin(message):
             reset_kazna_list(message)
         else:
             return None
             
+    elif text.lower() == '/clean@klankazna_bot':        
+        if is_admin(message):
+            reset_kazna_list(message)
+        else:
+            return None
+                   
 def is_admin(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
