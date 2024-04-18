@@ -8,6 +8,18 @@ bot = telebot.TeleBot(TOKEN)
 
 moscow_tz = pytz.timezone('Europe/Moscow')
 
+def send_data_file(message):
+    chat_id = message.chat.id
+    chat_data_file = f'user_data_{chat_id}.txt'
+
+    try:
+        with open(chat_data_file, 'rb') as f:
+            bot.send_document(chat_id, f)
+    except FileNotFoundError:
+        bot.send_message(chat_id, "Файл не найден")
+    except Exception as e:
+        bot.send_message(chat_id, f"{e}")
+
 def handle_kazna(message):
     chat_id = message.chat.id
     chat_data_file = f'user_data_{chat_id}.txt'
@@ -61,7 +73,12 @@ def handle_messages(message):
             reset_kazna_list(message)
         else:
             return None
-                   
+            
+    elif text.lower() == '/sflie@klankazna_bot' or '/sfile':
+    	if is_admin(message):
+    		send_data_file(message)
+    else:
+     	return None     			                                                                                            
 def is_admin(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
