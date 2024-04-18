@@ -4,7 +4,7 @@ from datetime import datetime
 import pytz
 import os
 
-TOKEN = '6775251060:AAGDYK6eTq70hHX5NVMCSMGmVoNXorZKINY'
+TOKEN = ''
 bot = telebot.TeleBot(TOKEN)
 
 moscow_tz = pytz.timezone('Europe/Moscow')
