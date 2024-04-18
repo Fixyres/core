@@ -22,7 +22,7 @@ def handle_kazna(message):
                     money = float(user_info[2])
                     user_data.append((money, line))  
                 user_data.sort(reverse=True)
-                response = "\n"
+                response = "<b>Если написать клан казна все то вы не будете в топе!!!</b>\n"
                 line_number = 1
                 for money, line in user_data:  
                     user_id, username, money, date_time, message_id = line.strip().split(',')
