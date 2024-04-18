@@ -4,10 +4,32 @@ from datetime import datetime
 import pytz
 import os
 
-TOKEN = ''
+TOKEN = '6775251060:AAGDYK6eTq70hHX5NVMCSMGmVoNXorZKINY'
 bot = telebot.TeleBot(TOKEN)
 
 moscow_tz = pytz.timezone('Europe/Moscow')
+
+def handle_kazna(message):
+    chat_id = message.chat.id
+    chat_data_file = f'user_data_{chat_id}.txt'
+
+    try:
+        with open(chat_data_file, 'r') as f:
+            lines = f.readlines()
+            if lines:
+                response = "\n"
+                line_number = 1  
+                for line in lines:
+                    user_id, username, money, date_time, message_id = line.strip().split(',')
+                    chat_id_clean = str(chat_id)[4:]
+                    message_link = f'<a href="https://t.me/c/{chat_id_clean}/{abs(int(message_id))}">{username}</a>'
+                    response += f"{line_number}) {message_link} - {money} - {date_time}\n"
+                    line_number += 1  
+            else:
+                response = "..."
+        bot.send_message(message.chat.id, response, parse_mode='HTML')
+    except FileNotFoundError:
+        bot.send_message(message.chat.id, "...")
 
 @bot.message_handler(func=lambda message: True, content_types=['text'])
 def handle_messages(message):
@@ -25,6 +47,11 @@ def handle_messages(message):
             handle_kazna(message)
         else:
             return None
+    elif text.lower() == '/clean':
+        if is_admin(message):
+            reset_kazna_list(message)
+        else:
+            return None
             
 def is_admin(message):
     chat_id = message.chat.id
@@ -37,16 +64,39 @@ def handle_clan_kazna(message):
     user_id = message.from_user.id
     username = message.from_user.first_name
 
-    text_parts = message.text.split(' ')
-    if len(text_parts) >= 3:
-        if text_parts[-1].lower() == 'все' or text_parts[-1].lower() == 'всё':
-            money = 'все деньги'
-        else:
-            try:
-                money = float(text_parts[-1])
-            except ValueError:
-                return None
+    text_parts = message.text.split('    ')  
+    if len(text_parts) >= 2:
+        text = '    '.join(text_parts[:2]) 
     else:
+        text = text_parts[0]  
+
+    text = text.strip()  
+
+    if text.lower().startswith('клан казна'):
+        text = text[10:].strip() 
+        handle_clan_kazna_internal(message, text)
+    elif text.lower().endswith('казна'):
+        text = text[:-5].strip()  
+        if is_admin(message):
+            handle_kazna_internal(message, text)
+        else:
+            return None
+
+def handle_clan_kazna_internal(message, text):
+    user_id = message.from_user.id
+    username = message.from_user.first_name
+
+    money = None
+    for word in text.split():
+        try:
+            money = float(word)
+            if money < 2e18:                
+                return None
+            break
+        except ValueError:
+            continue
+
+    if money is None:
         return None
 
     current_time = datetime.now(moscow_tz).strftime("%Y-%m-%d %H:%M:%S")
@@ -54,56 +104,31 @@ def handle_clan_kazna(message):
     chat_id = message.chat.id
     chat_data_file = f'user_data_{chat_id}.txt'
 
-    if money == 'все деньги':
-        try:
-            user_data = []
+    try:
+        user_data = []
 
-            if os.path.exists(chat_data_file):
-                with open(chat_data_file, 'r') as f:
-                    user_data = [line.strip() for line in f]
+        if os.path.exists(chat_data_file):
+            with open(chat_data_file, 'r') as f:
+                user_data = [line.strip() for line in f]
 
-            updated = False
-            for i, line in enumerate(user_data):
-                user_info = line.split(',')
-                if user_info[0] == str(user_id):
-                    user_data[i] = f"{user_id},{username},{money},{current_time},{message.message_id}"
-                    updated = True
-                    break
+        updated = False
+        for i, line in enumerate(user_data):
+            user_info = line.split(',')
+            if user_info[0] == str(user_id):
+                user_data[i] = f"{user_id},{username},{money},{current_time},{message.message_id}"
+                updated = True
+                break
 
-            if not updated:
-                user_data.append(f"{user_id},{username},{money},{current_time},{message.message_id}")
+        if not updated:
+            user_data.append(f"{user_id},{username},{money},{current_time},{message.message_id}")
 
-            with open(chat_data_file, 'w') as f:
-                for user_line in user_data:
-                    f.write(user_line + '\n')
-        except Exception as e:
-            print(f"{e}")
-    elif money >= 2e18:
-        try:
-            user_data = []
+        with open(chat_data_file, 'w') as f:
+            for user_line in user_data:
+                f.write(user_line + '\n')
+    except Exception as e:
+        print(f"{e}")
 
-            if os.path.exists(chat_data_file):
-                with open(chat_data_file, 'r') as f:
-                    user_data = [line.strip() for line in f]
-
-            updated = False
-            for i, line in enumerate(user_data):
-                user_info = line.split(',')
-                if user_info[0] == str(user_id):
-                    user_data[i] = f"{user_id},{username},{money},{current_time},{message.message_id}"
-                    updated = True
-                    break
-
-            if not updated:
-                user_data.append(f"{user_id},{username},{money},{current_time},{message.message_id}")
-
-            with open(chat_data_file, 'w') as f:
-                for user_line in user_data:
-                    f.write(user_line + '\n')
-        except Exception as e:
-            print(f"{e}")
-
-def handle_kazna(message):
+def handle_kazna_internal(message, text):
     chat_id = message.chat.id
     chat_data_file = f'user_data_{chat_id}.txt'
 
@@ -112,15 +137,30 @@ def handle_kazna(message):
             lines = f.readlines()
             if lines:
                 response = "\n"
+                line_number = 1  
                 for line in lines:
                     user_id, username, money, date_time, message_id = line.strip().split(',')
                     chat_id_clean = str(chat_id)[4:]
                     message_link = f'<a href="https://t.me/c/{chat_id_clean}/{abs(int(message_id))}">{username}</a>'
-                    response += f"{message_link} - {money} - {date_time}\n"
+                    response += f"{line_number}) {message_link} - {money} - {date_time}\n"
+                    line_number += 1  
             else:
                 response = "..."
         bot.send_message(message.chat.id, response, parse_mode='HTML')
     except FileNotFoundError:
         bot.send_message(message.chat.id, "...")
+
+def reset_kazna_list(message):
+    chat_id = message.chat.id
+    chat_data_file = f'user_data_{chat_id}.txt'
+
+    try:
+        if os.path.exists(chat_data_file):
+            os.remove(chat_data_file)
+            bot.reply_to(message, "СЭР ДА СЭР!")
+        else:
+            bot.reply_to(message, "СЭР СПИСОК ПУСТ СЭР!")
+    except Exception as e:
+        bot.reply_to(message, f"Ошибка")
 
 bot.polling()
