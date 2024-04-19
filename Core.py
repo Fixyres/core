@@ -8,6 +8,38 @@ bot = telebot.TeleBot(TOKEN)
 
 moscow_tz = pytz.timezone('Europe/Moscow')
 
+def remove_user_from_list(message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+
+    text_parts = message.text.split()
+    if len(text_parts) != 2 or not text_parts[1].isdigit():
+        return None
+
+    index_to_remove = int(text_parts[1]) - 1
+
+    chat_data_file = f'user_data_{chat_id}.txt'
+
+    try:
+        with open(chat_data_file, 'r') as f:
+            lines = f.readlines()
+            if lines:
+                if 0 <= index_to_remove < len(lines):
+                    removed_line = lines.pop(index_to_remove)
+
+                    with open(chat_data_file, 'w') as fw:
+                        fw.writelines(lines)
+
+                    bot.reply_to(message, f"СЭР ДА СЭР!")
+                else:
+                    bot.reply_to(message, "СЭР НЕТ СЭР!")
+            else:
+                bot.reply_to(message, "...")
+    except FileNotFoundError:
+        bot.reply_to(message, "...")
+    except Exception as e:
+        bot.reply_to(message, f"{e}")
+
 def send_data_file(message):
     chat_id = message.chat.id
     chat_data_file = f'user_data_{chat_id}.txt'
@@ -60,26 +92,31 @@ def handle_messages(message):
     if text.lower().startswith('клан казна'):
         handle_clan_kazna(message)
     elif text.lower().endswith('казна'):
-    	handle_kazna(message)
-
+        handle_kazna(message)
     elif text.lower() == '/clean':
         if is_admin(message):
             reset_kazna_list(message)
         else:
             return None
-            
     elif text.lower() == '/clean@klankazna_bot':        
         if is_admin(message):
             reset_kazna_list(message)
         else:
             return None
             
-    elif text.lower() == '/sflie':
-    	if is_admin(message):
-    		send_data_file(message)
+    elif text.lower() == '/sfile':
+        if is_admin(message):
+            send_data_file(message)
+    	
+    elif text.lower() == '/sfile@klankazna_bot':
+        if is_admin(message):
+            send_data_file(message)
+    	      
+    elif text.lower().startswith('удалить'):
+        if is_admin(message):
+            remove_user_from_list(message)
     else:
-     	return None  
-        
+        return None			                                                                                            
 def is_admin(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
