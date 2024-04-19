@@ -3,8 +3,8 @@ from datetime import datetime
 import pytz
 import os
 
-TOKEN = '6775251060:AAGDYK6eTq70hHX5NVMCSMGmVoNXorZKINY'
-bot = telebot.TeleBot(TOKEN)
+pizda = '6775251060:AAGDYK6eTq70hHX5NVMCSMGmVoNXorZKINY'
+bot = telebot.TeleBot(pizda)
 
 moscow_tz = pytz.timezone('Europe/Moscow')
 
@@ -16,7 +16,7 @@ def remove_user_from_list(message):
     if len(text_parts) != 2 or not text_parts[1].isdigit():
         return None
 
-    index_to_remove = int(text_parts[1]) - 1
+    position_to_remove = int(text_parts[1])
 
     chat_data_file = f'user_data_{chat_id}.txt'
 
@@ -24,11 +24,19 @@ def remove_user_from_list(message):
         with open(chat_data_file, 'r') as f:
             lines = f.readlines()
             if lines:
-                if 0 <= index_to_remove < len(lines):
-                    removed_line = lines.pop(index_to_remove)
+                user_data = []
+                for line in lines:
+                    user_info = line.strip().split(',')
+                    money = float(user_info[2])
+                    user_data.append((money, line))
+
+                user_data.sort(reverse=True)
+
+                if 0 < position_to_remove <= len(user_data):
+                    removed_line = user_data.pop(position_to_remove - 1)[1]
 
                     with open(chat_data_file, 'w') as fw:
-                        fw.writelines(lines)
+                        fw.writelines(line for _, line in user_data)
 
                     bot.reply_to(message, f"СЭР ДА СЭР!")
                 else:
