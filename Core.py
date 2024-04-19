@@ -162,7 +162,7 @@ def handle_clan_kazna_internal(message, text):
     for word in text.split():
         try:
             money = float(word)
-            if money < 2e18:                
+            if money < 2e18:
                 return None
             break
         except ValueError:
