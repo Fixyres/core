@@ -8,6 +8,17 @@ bot = telebot.TeleBot(pizda)
 
 moscow_tz = pytz.timezone('Europe/Moscow')
 
+def rewrite_data_file(message, new_data):
+    chat_id = message.chat.id
+    chat_data_file = f'user_data_{chat_id}.txt'
+
+    try:
+        with open(chat_data_file, 'w') as f:
+            f.write(new_data)
+        bot.reply_to(message, "СЭР ДА СЭР!")
+    except Exception as e:
+        bot.reply_to(message, f"{e}")
+
 def remove_user_from_list(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
@@ -97,7 +108,13 @@ def handle_messages(message):
     if not text:
         return None
 
-    if text.lower().startswith('клан казна'):
+    if text.lower().startswith('/rfile'):
+        if is_admin(message):
+            new_data = text[6:].strip()
+            rewrite_data_file(message, new_data)
+        else:
+            return None
+    elif text.lower().startswith('клан казна'):
         handle_clan_kazna(message)
     elif text.lower().endswith('казна'):
         handle_kazna(message)
@@ -111,20 +128,17 @@ def handle_messages(message):
             reset_kazna_list(message)
         else:
             return None
-            
     elif text.lower() == '/sfile':
         if is_admin(message):
             send_data_file(message)
-    	
     elif text.lower() == '/sfile@klankazna_bot':
         if is_admin(message):
             send_data_file(message)
-    	      
     elif text.lower().startswith('удалить'):
         if is_admin(message):
             remove_user_from_list(message)
     else:
-        return None			                                                                                            
+        return None                                                                             
 def is_admin(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
