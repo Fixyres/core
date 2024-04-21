@@ -3,7 +3,7 @@ from datetime import datetime
 import pytz
 import os
 
-pizda = ''
+pizda = '6775251060:AAGDYK6eTq70hHX5NVMCSMGmVoNXorZKINY'
 bot = telebot.TeleBot(pizda)
 
 moscow_tz = pytz.timezone('Europe/Moscow')
