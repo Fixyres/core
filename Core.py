@@ -179,7 +179,7 @@ def handle_messages(message):
     elif text.lower().startswith('удалить'):
         if is_admin(message):
             remove_user_from_list(message)
-    elif text.lower().startswith('изменить'):
+    elif text.lower().startswith('яебалсебчврртидримкортожевместесбананом'):
         if is_admin(message):
             change_user_money(message)
     else:
@@ -218,52 +218,53 @@ def handle_clan_kazna_internal(message, text):
     user_id = message.from_user.id
     username = message.from_user.first_name
 
-    if text.lower() == "всё" or text.lower() == "все":
-        money = 0
-    else:
-        money = None
-        for word in text.split():
-            try:
-                money = float(word)
-                if money < 2e18:
+    if text.lower().startswith("клан казна") and len(text.split()) > 2:
+        if text.lower() == "клан казна всё" or text.lower() == "клан казна все":
+            money = -1
+        else:
+            money = None
+            for word in text.split():
+                try:
+                    money = float(word)
+                    if money < 2e18:
+                        break
+                except ValueError:
+                    continue
+
+        current_time = datetime.now(moscow_tz).strftime("%Y-%m-%d %H:%M:%S")
+
+        chat_id = message.chat.id
+        chat_data_file = f'user_data_{chat_id}.txt'
+
+        try:
+            user_data = []
+
+            if os.path.exists(chat_data_file):
+                with open(chat_data_file, 'r') as f:
+                    user_data = [line.strip() for line in f]
+
+            updated = False
+            for i, line in enumerate(user_data):
+                user_info = line.split(',')
+                if user_info[0] == str(user_id):
+                    if money is not None:
+                        user_data[i] = f"{user_id},{username},{money},{current_time},{message.message_id}"
+                    else:
+                        user_data[i] = f"{user_id},{username},хз,{current_time},{message.message_id}"
+                    updated = True
                     break
-            except ValueError:
-                continue
 
-    current_time = datetime.now(moscow_tz).strftime("%Y-%m-%d %H:%M:%S")
-
-    chat_id = message.chat.id
-    chat_data_file = f'user_data_{chat_id}.txt'
-
-    try:
-        user_data = []
-
-        if os.path.exists(chat_data_file):
-            with open(chat_data_file, 'r') as f:
-                user_data = [line.strip() for line in f]
-
-        updated = False
-        for i, line in enumerate(user_data):
-            user_info = line.split(',')
-            if user_info[0] == str(user_id):
+            if not updated:
                 if money is not None:
-                    user_data[i] = f"{user_id},{username},{money},{current_time},{message.message_id}"
+                    user_data.append(f"{user_id},{username},{money},{current_time},{message.message_id}")
                 else:
-                    user_data[i] = f"{user_id},{username},хз,{current_time},{message.message_id}"
-                updated = True
-                break
+                    user_data.append(f"{user_id},{username},хз,{current_time},{message.message_id}")
 
-        if not updated:
-            if money is not None:
-                user_data.append(f"{user_id},{username},{money},{current_time},{message.message_id}")
-            else:
-                user_data.append(f"{user_id},{username},хз,{current_time},{message.message_id}")
-
-        with open(chat_data_file, 'w') as f:
-            for user_line in user_data:
-                f.write(user_line + '\n')
-    except Exception as e:
-        print(f"{e}")
+            with open(chat_data_file, 'w') as f:
+                for user_line in user_data:
+                    f.write(user_line + '\n')
+        except Exception as e:
+            print(f"{e}")
 
 def handle_kazna_internal(message, text):
     chat_id = message.chat.id
