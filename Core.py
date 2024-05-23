@@ -82,6 +82,18 @@ def send_data_file(message):
     except Exception as e:
         bot.send_message(chat_id, f"{e}")
 
+def send_stata_file(message):
+    chat_id = message.chat.id
+    chat_data_file = f'user_data_{chat_id}.txt'
+
+    try:
+        with open(stata.txt, 'rb') as f:
+            bot.send_document(chat_id, f)
+    except FileNotFoundError:
+        bot.send_message(chat_id, "Файл не найден")
+    except Exception as e:
+        bot.send_message(chat_id, f"{e}")
+        
 def handle_kazna(message):
     chat_id = message.chat.id
     chat_data_file = f'user_data_{chat_id}.txt'
@@ -120,7 +132,7 @@ def handle_messages(message):
         return None
 
     if text.lower().startswith('/rfile'):
-        if is_admin(message):
+        if xz(message):
             new_data = text[6:].strip()
             rewrite_data_file(message, new_data)
         else:
@@ -142,9 +154,11 @@ def handle_messages(message):
     elif text.lower() == '/sfile':
         if xz(message):
             send_data_file(message)
+            send_stata_file(message)
     elif text.lower() == '/sflie@klankazna_bot':
         if xz(message):
-            send_data_file(message)       
+            send_data_file(message) 
+            send_stata_file(message)
     elif text.lower() == '/t':
         start_game(message)
     elif text.lower() == '/t@klankazna_bot':
@@ -162,7 +176,7 @@ def handle_messages(message):
     elif text.lower() == '/stata@klankazna_bot':
         view_statistics(message)
     elif text.lower().startswith('удалить'):
-        if is_admin(message):
+        if xz(message):
             remove_user_from_list(message)
     else:
         return None                                                                             
