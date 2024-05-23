@@ -150,6 +150,10 @@ def handle_messages(message):
         leave_game(message)
     elif text.lower() == '/leave@klankazna_bot':
         leave_game(message)
+    elif text.lower() == '/stata':
+        view_statistics(message)
+    elif text.lower() == '/stata@klankazna_bot':
+        view_statistics(message)
     elif text.lower().startswith('удалить'):
         if is_admin(message):
             remove_user_from_list(message)
