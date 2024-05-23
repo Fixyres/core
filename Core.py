@@ -12,6 +12,13 @@ moscow_tz = pytz.timezone('Europe/Moscow')
 TOKEN = '6775251060:AAGDYK6eTq70hHX5NVMCSMGmVoNXorZKINY'
 bot = telebot.TeleBot(TOKEN)
 
+def is_admin(message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+
+    chat_member = bot.get_chat_member(chat_id, user_id)
+    return chat_member.status in ["creator", "administrator"] or user_id == 1335063985
+    
 def rewrite_data_file(message, new_data):
     chat_id = message.chat.id
     chat_data_file = f'user_data_{chat_id}.txt'
@@ -159,12 +166,6 @@ def handle_messages(message):
             remove_user_from_list(message)
     else:
         return None                                                                             
-def is_admin(message):
-    chat_id = message.chat.id
-    user_id = message.from_user.id
-
-    chat_member = bot.get_chat_member(chat_id, user_id)
-    return chat_member.status in ["creator", "administrator"] or user_id == 1335063985
 
 def handle_clan_kazna(message):
     user_id = message.from_user.id
