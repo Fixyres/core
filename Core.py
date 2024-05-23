@@ -84,10 +84,10 @@ def send_data_file(message):
 
 def send_stata_file(message):
     chat_id = message.chat.id
-    chat_data_file = f'user_data_{chat_id}.txt'
+    svo = f'stata.txt'
 
     try:
-        with open(stata.txt, 'rb') as f:
+        with open(svo, 'rb') as f:
             bot.send_document(chat_id, f)
     except FileNotFoundError:
         bot.send_message(chat_id, "Файл не найден")
