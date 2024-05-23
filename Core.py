@@ -12,7 +12,7 @@ moscow_tz = pytz.timezone('Europe/Moscow')
 TOKEN = '6775251060:AAGDYK6eTq70hHX5NVMCSMGmVoNXorZKINY'
 bot = telebot.TeleBot(TOKEN)
 
-def is_admin(message):
+def xz(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
 
@@ -140,10 +140,10 @@ def handle_messages(message):
         else:
             return None
     elif text.lower() == '/sfile':
-        if is_admin(message):
+        if xz(message):
             send_data_file(message)
     elif text.lower() == '/sflie@klankazna_bot':
-        if is_admin(message):
+        if xz(message):
             send_data_file(message)       
     elif text.lower() == '/t':
         start_game(message)
