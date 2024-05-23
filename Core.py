@@ -324,6 +324,31 @@ def update_statistics(user_id, result):
     with open(STATISTICS_FILE, 'a') as file:
         file.write(f"{user_id} {result}\n")
 
+user_statuses = load_user_statuses()
+
+@bot.message_handler(commands=['status'])
+def set_user_status(message):
+    if is_admin(message.from_user.id):
+        try:
+            user_id = get_user_id_from_command(message.text)
+            status = message.text.split(maxsplit=2)[2]
+            user_statuses[user_id] = status
+            save_user_statuses(user_statuses)
+            bot.reply_to(message, f"Статус для пользователя {user_id} установлен: {status}")
+        except (IndexError, ValueError):
+            bot.reply_to(message, "Неправильный формат команды. Используйте: /status @username ваш_статус")
+    else:
+        bot.reply_to(message, "Нет прав доступа.")
+
+def get_user_statistics(user_id):
+    try:
+        with open(STATISTICS_FILE, 'r') as file:
+            lines = file.readlines()
+            user_stats = [line.split() for line in lines if line.startswith(str(user_id))]
+            return user_stats, user_statuses.get(user_id)
+    except FileNotFoundError:
+        return [], None
+        
 @bot.message_handler(commands=['stata'])
 def view_statistics(message):
     user_id = message.from_user.id
