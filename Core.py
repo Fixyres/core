@@ -130,12 +130,12 @@ def handle_messages(message):
     elif text.lower().endswith('казна'):
         handle_kazna(message)
     elif text.lower() == '/clean':
-        if is_admin(message):
+        if xz(message):
             reset_kazna_list(message)
         else:
             return None
     elif text.lower() == '/clean@klankazna_bot':        
-        if is_admin(message):
+        if xz(message):
             reset_kazna_list(message)
         else:
             return None
