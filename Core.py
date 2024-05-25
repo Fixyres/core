@@ -9,6 +9,7 @@ import pytz
 import threading
 import time
 import requests
+import re
 
 API_KEY = '41d63e00422b4ab1a39a77d6582b79c1'  
 
@@ -262,12 +263,15 @@ def handle_message(message):
             convert_currency(message)
         else:
             try:
-                expression = message.text
-                result = eval(expression)
-                if result == 1488:
-                     bot.reply_to(message, "ПАСХАЛКО")
-                else:
-                      bot.reply_to(message, f"<code>{result}</code>", parse_mode='HTML')
+                 expression = message.text
+                 if re.search(r'[+\-*/]', expression):
+                  result = eval(expression)
+                  if result == 1488:                  	
+                       bot.reply_to(message, "ПАСХАЛКО")
+                  else:
+                        bot.reply_to(message, f"<code>{result}</code>", parse_mode='HTML')
+                 else:
+                        return None
 
             except Exception as e:
                 return None
@@ -565,229 +569,3 @@ class TicTacToeGame:
             return True
         return False
 
-    def reset_game(self):
-        self.game_board = [[' ' for _ in range(self.size)] for _ in range(self.size)]
-        self.players = {'X': None, 'O': None}
-        self.current_player = None
-        self.player_names = {'X': '', 'O': ''}
-        self.game_active = False
-        self.leave_button_added = False
-        self.message_id = None
-
-@bot.message_handler(commands=['t'])
-def start_game(message):
-    chat_id = message.chat.id
-
-    if chat_id not in games:
-        games[chat_id] = {'count': 0, 'data': {}}
-
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    for size_label, size_info in board_sizes.items():
-        callback_data = f'choose_size:{size_info["size"]}'
-        button = types.InlineKeyboardButton(size_label, callback_data=callback_data)
-        markup.add(button)
-
-    bot.send_message(chat_id, "🔮 Размер игрового поля:", reply_markup=markup)
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('choose_size'))
-def choose_size(call):
-    chat_id = call.message.chat.id
-
-    size = int(call.data.split(':')[1])
-
-    game_id = games[chat_id]['count']
-    games[chat_id]['count'] += 1
-
-    win_condition = 3
-    new_game = TicTacToeGame(game_id, call.from_user.id, size, win_condition)
-    games[chat_id]['data'][game_id] = new_game
-
-    user = call.from_user
-    new_game.player_names['X'] = user.first_name
-
-    win_condition_buttons = types.InlineKeyboardMarkup(row_width=3)
-    for win_condition in board_sizes[f"{size}*{size}"]["win_condition"]:
-        callback_data = f'choose_win_condition:{win_condition}:{game_id}'
-        button = types.InlineKeyboardButton(str(win_condition), callback_data=callback_data)
-        win_condition_buttons.add(button)
-
-    text = f"🏆 В ряд для победы:"
-    bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=text, reply_markup=win_condition_buttons, parse_mode='Markdown')
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('choose_win_condition'))
-def choose_win_condition(call):
-    chat_id = call.message.chat.id
-
-    win_condition = int(call.data.split(':')[1])
-    game_id = int(call.data.split(':')[2])
-
-    current_game = games[chat_id]['data'].get(game_id)
-    if current_game:
-        current_game.win_condition = win_condition
-
-        join_button = types.InlineKeyboardButton('🤝 Присоединиться', callback_data=f'join:{game_id}')
-        markup = types.InlineKeyboardMarkup().add(join_button)
-        text = f"🎮 [{call.from_user.first_name}](tg://user?id={call.from_user.id}), ожидание второго игрока... 🕒\n⬜ Размер поля: {current_game.size}x{current_game.size}\n🚧 {win_condition} в ряд!"
-        message = bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=text, reply_markup=markup, parse_mode='Markdown')
-        current_game.message_id = message.message_id
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('join'))
-def join_game(call):
-    chat_id = call.message.chat.id
-    user_id = call.from_user.id
-    game_id = int(call.data.split(':')[1])
-
-    current_game = games[chat_id]['data'].get(game_id)
-
-    if current_game and not current_game.game_active and current_game.players['O'] is None and user_id != current_game.players['X']:
-        current_game.players['O'] = user_id
-        current_game.player_names['O'] = call.from_user.first_name
-        current_game.current_player = random.choice(['X', 'O'])
-        current_game.player_symbols['X'] = '❌' if random.random() < 0.5 else '⭕'
-        current_game.player_symbols['O'] = '⭕' if current_game.player_symbols['X'] == '❌' else '❌'
-
-        markup = current_game.render_board()
-
-        text = f"🔪  [{current_game.player_names['X']}](tg://user?id={current_game.players['X']}) {current_game.player_symbols['X']} против [{current_game.player_names['O']}](tg://user?id={current_game.players['O']})  {current_game.player_symbols['O']} 🗡️\n\n⏳ Текущий ход: [{current_game.player_names[current_game.current_player]}](tg://user?id={current_game.players[current_game.current_player]})\n🚧 {current_game.win_condition} в ряд!"
-
-        message = bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=text, reply_markup=markup, parse_mode='Markdown')
-        current_game.message_id = message.message_id
-        current_game.game_active = True
-    else:
-        bot.answer_callback_query(call.id, "Игра уже началась или вы уже участвуете. 🚫")
-    return
-    
-@bot.message_handler(commands=['leave'])
-def leave_game(message):
-    chat_id = message.chat.id
-    user_id = message.from_user.id
-
-    if chat_id not in games or 'data' not in games[chat_id]:
-        return
-
-    for game_id, current_game in games[chat_id]['data'].items():
-        if current_game and current_game.game_active and (user_id == current_game.players['X'] or user_id == current_game.players['O']):
-            if user_id == current_game.players['X']:
-                update_statistics(current_game.players['X'], 'leave')
-                update_statistics(current_game.players['O'], 'total_games')
-            elif user_id == current_game.players['O']:
-                update_statistics(current_game.players['O'], 'leave')
-                update_statistics(current_game.players['X'], 'total_games')
-
-            text = f"👋 [{message.from_user.first_name}](tg://user?id={message.from_user.id}) покинул(а) игру!\n😞 Игра окончена.\n\n🔪 [{current_game.player_names['X']}](tg://user?id={current_game.players['X']}) {current_game.player_symbols['X']} против [{current_game.player_names['O']}](tg://user?id={current_game.players['O']}) {current_game.player_symbols['O']} 🗡️\n🚧 {current_game.win_condition} в ряд!"
-
-            markup = None
-            if not current_game.check_winner(current_game.current_player) and not current_game.check_draw():
-                markup = current_game.render_board()
-
-            bot.edit_message_text(chat_id=chat_id, message_id=current_game.message_id, text=text, reply_markup=markup, parse_mode='Markdown')
-            del games[chat_id]['data'][game_id]
-            current_game.reset_game()
-            return
-            
-@bot.callback_query_handler(func=lambda call: True)
-def handle_query(call):
-    chat_id = call.message.chat.id
-    user_id = call.from_user.id
-
-    if chat_id not in games or 'data' not in games[chat_id]:
-        return
-
-    query_data = call.data.split(':')
-    action = query_data[0]
-
-    if action == 'join':
-        game_id = int(query_data[1])
-        current_game = games[chat_id]['data'].get(game_id)
-
-        if current_game and not current_game.game_active and current_game.players['O'] is None and user_id != current_game.players['X']:
-            current_game.players['O'] = user_id
-            current_game.player_names['O'] = call.from_user.first_name
-            current_game.current_player = random.choice(['X', 'O'])
-            current_game.player_symbols['X'] = '❌' if random.random() < 0.5 else '⭕'
-            current_game.player_symbols['O'] = '⭕' if current_game.player_symbols['X'] == '❌' else '❌'
-
-            markup = current_game.render_board()
-
-            text = f"🔪  [{current_game.player_names['X']}](tg://user?id={current_game.players['X']}) {current_game.player_symbols['X']} против [{current_game.player_names['O']}](tg://user?id={current_game.players['O']})  {current_game.player_symbols['O']} 🗡️\n\n⏳ Текущий ход: [{current_game.player_names[current_game.current_player]}](tg://user?id={current_game.players[current_game.current_player]})\n🚧 {current_game.win_condition} в ряд!"
-
-            message = bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=text, reply_markup=markup, parse_mode='Markdown')
-            current_game.message_id = message.message_id
-            current_game.game_active = True
-        else:
-            bot.answer_callback_query(call.id, "Игра уже началась или вы уже участвуете. 🚫")
-        return
-
-    if action == 'leave':
-        game_id = int(query_data[1])
-        current_game = games[chat_id]['data'].get(game_id)
-
-        if current_game and current_game.game_active and (user_id == current_game.players['X'] or user_id == current_game.players['O']):
-            text = f"👋 [{call.from_user.first_name}](tg://user?id={call.from_user.id}) покинул(а) игру!\n😞 Игра окончена.\n\n🔪 [{current_game.player_names['X']}](tg://user?id={current_game.players['X']}) {current_game.player_symbols['X']} против [{current_game.player_names['O']}](tg://user?id={current_game.players['O']}) {current_game.player_symbols['O']} 🗡️\n🚧 {current_game.win_condition} в ряд!"
-
-            markup = None
-            if not current_game.check_winner(current_game.current_player) and not current_game.check_draw():
-                markup = current_game.render_board()
-
-            bot.edit_message_text(chat_id=chat_id, message_id=current_game.message_id, text=text, reply_markup=markup, parse_mode='Markdown')
-            del games[chat_id]['data'][game_id]
-            current_game.reset_game()
-        return
-
-    if action == 'move':
-        game_id = int(query_data[3])
-        current_game = games[chat_id]['data'].get(game_id)
-
-        if current_game and current_game.game_active:
-            row, col = map(int, query_data[1:3])
-            if current_game.players[current_game.current_player] != user_id:
-                bot.answer_callback_query(call.id, "⛔ Сейчас не ваш ход или вы не участвыете в этой игре!")
-                return
-            if current_game.game_board[row][col] != ' ':
-                bot.answer_callback_query(call.id, "#️⃣ Клетка уже занята!")
-                return
-
-            current_game.game_board[row][col] = current_game.current_player
-            if current_game.check_winner(current_game.current_player):
-                winner_name = current_game.player_names[current_game.current_player]
-                text = f"🏆 [{winner_name}](tg://user?id={current_game.players[current_game.current_player]}) победил(а)!\n\n🔪 [{current_game.player_names['X']}](tg://user?id={current_game.players['X']}) {current_game.player_symbols['X']} против [{current_game.player_names['O']}](tg://user?id={current_game.players['O']}) {current_game.player_symbols['O']} 🗡️\n🚧 {current_game.win_condition} в ряд!"
-                bot.edit_message_text(chat_id=chat_id, message_id=current_game.message_id, text=text, reply_markup=current_game.render_board(), parse_mode='Markdown')
-                del games[chat_id]['data'][game_id]
-                current_game.reset_game()
-                return
-
-            if current_game.check_draw():
-                text = f"😐 Ничья!\n\n🔪 [{current_game.player_names['X']}](tg://user?id={current_game.players['X']}) {current_game.player_symbols['X']} против [{current_game.player_names['O']}](tg://user?id={current_game.players['O']}) {current_game.player_symbols['O']} 🗡️\n🚧 {current_game.win_condition} в ряд!"
-                bot.edit_message_text(chat_id=chat_id, message_id=current_game.message_id, text=text, reply_markup=current_game.render_board(), parse_mode='Markdown')
-                del games[chat_id]['data'][game_id]
-                current_game.reset_game()
-                return
-
-            current_game.current_player = 'X' if current_game.current_player == 'O' else 'O'
-            markup = current_game.render_board()
-            text = f"🔪 [{current_game.player_names['X']}](tg://user?id={current_game.players['X']})  {current_game.player_symbols['X']} против [{current_game.player_names['O']}](tg://user?id={current_game.players['O']}) {current_game.player_symbols['O']} 🗡️\n\n⏳ Текущий ход: [{current_game.player_names[current_game.current_player]}](tg://user?id={current_game.players[current_game.current_player]})\n🚧 {current_game.win_condition} в ряд!"
-            bot.edit_message_text(chat_id=chat_id, message_id=current_game.message_id, text=text, reply_markup=markup, parse_mode='Markdown')
-
-with open(admins_file, 'r') as file:
-    admins = set(map(int, file.read().splitlines()))
-
-with open(blocked_file, 'r') as file:
-    blacklisted_users = set(map(int, file.read().splitlines()))
-
-def save_user_info_to_file(username, user_id):
-    if username not in added_users:
-        with open(users_file, 'a') as file:
-            file.write(f"@{username} - {user_id}\n")
-        added_users.add(username)
-        
-@bot.message_handler(func=lambda message: True)
-def handle_user_message(message):
-    username = message.from_user.username
-    user_id = message.from_user.id
-    save_user_info_to_file(username, user_id)
-
-while True:
-    try:
-        bot.polling(none_stop=True)
-    except Exception as e:
-        print(f"{e}")            
