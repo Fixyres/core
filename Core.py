@@ -6,12 +6,53 @@ import json
 import os
 from datetime import datetime
 import pytz
+import threading
+import time
+import requests
+
+API_KEY = '41d63e00422b4ab1a39a77d6582b79c1'  
 
 moscow_tz = pytz.timezone('Europe/Moscow')
 
 TOKEN = '6775251060:AAGDYK6eTq70hHX5NVMCSMGmVoNXorZKINY'
 bot = telebot.TeleBot(TOKEN)
 
+BASE_URL = 'https://openexchangerates.org/api/'
+
+def get_exchange_rate(base_currency, target_currency):
+    try:
+        response = requests.get(f'{BASE_URL}latest.json', params={'app_id': API_KEY})
+        data = response.json()
+        rates = data['rates']
+        if target_currency in rates:
+            return rates[target_currency] / rates[base_currency]
+        else:
+            return None
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+        
+def convert_currency(message):
+    try:
+        parts = message.text.split()
+        if len(parts) != 4:
+            bot.send_message(message.chat.id, "🙄 Пример: /c 100 USD EUR")
+            return
+        
+        amount = float(parts[1])
+        base_currency = parts[2].upper()
+        target_currency = parts[3].upper()
+
+        exchange_rate = get_exchange_rate(base_currency, target_currency)
+        if exchange_rate:
+            converted_amount = amount * exchange_rate
+            bot.send_message(message.chat.id, f"{amount} {base_currency} = {converted_amount:.2f} {target_currency}")
+        else:
+            bot.send_message(message.chat.id, "...")
+    except Exception as e:
+        bot.send_message(message.chat.id, "...")
+        print(f"{e}")
+                
 def xz(message):
     chat_id = message.chat.id
     user_id = message.from_user.id
@@ -72,15 +113,20 @@ def remove_user_from_list(message):
 
 def send_data_file(message):
     chat_id = message.chat.id
-    chat_data_file = f'user_data_{chat_id}.txt'
+    with open(CHATS_FILE, 'r') as f:
+        all_chats = json.load(f)
 
-    try:
-        with open(chat_data_file, 'rb') as f:
-            bot.send_document(chat_id, f)
-    except FileNotFoundError:
-        bot.send_message(chat_id, "Файл не найден")
-    except Exception as e:
-        bot.send_message(chat_id, f"{e}")
+    for chat in all_chats:
+        chat_data_file = f'user_data_{chat}.txt'
+        try:
+            with open(chat_data_file, 'rb') as f:
+                bot.send_document(chat_id, f)
+                time.sleep(1)  
+        except FileNotFoundError:
+            bot.send_message(chat_id, f"Файл {chat_data_file} не найден")
+        except Exception as e:
+            bot.send_message(chat_id, f"Ошибка при отправке файла {chat_data_file}: {e}")
+
 
 def send_stata_file(message):
     chat_id = message.chat.id
@@ -122,65 +168,112 @@ def handle_kazna(message):
     except FileNotFoundError:
         bot.send_message(message.chat.id, "...")
 
-@bot.message_handler(func=lambda message: True, content_types=['text'])
-def handle_messages(message):
-    if message.chat.type == 'private':
-        return None
-    
-    text = message.text.strip()
-    if not text:
-        return None
+ALLOWED_USER_ID = 1335063985
+VIDEO_URL = 'https://raw.githubusercontent.com/Fixyres/core/main/IMG_20240525_210542_447.jpg'
+MESSAGE_TEXT = '🍞 Дать денег на хлеб: \n\n💎 TON: <code>UQBJMIRk8ylArSR64lzPVvsbl3LMJOIkoRuBYas7v_Lbp7e3</code>\n\n💳 Банк: <code>5167803243664047</code>'
+CHATS_FILE = 'chats.json'
 
-    if text.lower().startswith('/rfile'):
-        if xz(message):
-            new_data = text[6:].strip()
-            rewrite_data_file(message, new_data)
-        else:
-            return None
-    elif text.lower().startswith('клан казна'):
-        handle_clan_kazna(message)
-    elif text.lower().endswith('казна'):
-        handle_kazna(message)
-    elif text.lower() == '/clean':
-        if xz(message):
-            reset_kazna_list(message)
-        else:
-            return None
-    elif text.lower() == '/clean@klankazna_bot':        
-        if xz(message):
-            reset_kazna_list(message)
-        else:
-            return None
-    elif text.lower() == '/sfile':
-        if xz(message):
-            send_data_file(message)
-            send_stata_file(message)
-    elif text.lower() == '/sflie@klankazna_bot':
-        if xz(message):
-            send_data_file(message) 
-            send_stata_file(message)
-    elif text.lower() == '/t':
-        start_game(message)
-    elif text.lower() == '/t@klankazna_bot':
-        start_game(message)    
-    elif text.lower() == '/myid':
-    	get_my_id(message)
-    elif text.lower() == '/myid@klankazna_bot':
-    	get_my_id(message)	
-    elif text.lower() == '/leave':
-        leave_game(message)
-    elif text.lower() == '/leave@klankazna_bot':
-        leave_game(message)
-    elif text.lower() == '/stata':
-        view_statistics(message)
-    elif text.lower() == '/stata@klankazna_bot':
-        view_statistics(message)
-    elif text.lower().startswith('удалить'):
-        if xz(message):
-            remove_user_from_list(message)
+if os.path.exists(CHATS_FILE):
+    with open(CHATS_FILE, 'r') as f:
+        chats = json.load(f)
+else:
+    chats = []
+
+def save_chats():
+    with open(CHATS_FILE, 'w') as f:
+        json.dump(chats, f)
+
+def send_video_to_all_chats():
+    for chat_id in chats:
+        try:
+            bot.send_photo(chat_id, VIDEO_URL, caption=MESSAGE_TEXT,  parse_mode='HTML')
+            time.sleep(3)
+        except Exception as e:
+            print(f"Не удалось отправить в чат {chat_id}: {e}")
+
+def periodic_video_sender():
+    while True:
+        send_video_to_all_chats()
+        time.sleep(3 * 60 * 60)
+
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    if message.chat.id not in chats:
+        chats.append(message.chat.id)
+        save_chats()
     else:
-        return None                                                                             
+        text = message.text.strip()
+        if not text:
+            return None
 
+        if text.lower().startswith('/rfile'):
+            if xz(message):
+                new_data = text[6:].strip()
+                rewrite_data_file(message, new_data)
+            else:
+                return None
+        elif text.lower().startswith('клан казна'):
+            handle_clan_kazna(message)
+        elif text.lower().endswith('казна'):
+            handle_kazna(message)
+        elif text.lower() == '/clean':
+            if xz(message):
+                reset_kazna_list(message)
+            else:
+                return None
+        elif text.lower() == '/clean@klankazna_bot':        
+            if xz(message):
+                reset_kazna_list(message)
+            else:
+                return None
+        elif text.lower() == '/sfile':
+            if xz(message):
+                send_data_file(message)
+                send_stata_file(message)
+        elif text.lower() == '/sflie@klankazna_bot':
+            if xz(message):
+                send_data_file(message) 
+                send_stata_file(message)
+        elif text.lower() == '/t':
+            start_game(message)
+        elif text.lower() == '/t@klankazna_bot':
+            start_game(message)    
+        elif text.lower() == '/myid':
+            get_my_id(message)
+        elif text.lower() == '/myid@klankazna_bot':
+            get_my_id(message)    
+        elif text.lower() == '/leave':
+            leave_game(message)
+        elif text.lower() == '/leave@klankazna_bot':
+            leave_game(message)
+        elif text.lower() == '/stata':
+            view_statistics(message)
+        elif text.lower() == '/stata@klankazna_bot':
+            view_statistics(message)
+        elif text.lower().startswith('удалить'):
+            if xz(message):
+                remove_user_from_list(message)
+        elif text.lower().startswith('/donate'):
+            if message.from_user.id == ALLOWED_USER_ID:
+                send_video_to_all_chats()
+            else:
+                return None
+        elif text.lower().startswith('/c'):
+            convert_currency(message)
+        else:
+            try:
+                expression = message.text
+                result = eval(expression)
+                if result == 1488:
+                     bot.reply_to(message, "ПАСХАЛКО")
+                else:
+                      bot.reply_to(message, f"<code>{result}</code>", parse_mode='HTML')
+
+            except Exception as e:
+                return None
+
+threading.Thread(target=periodic_video_sender, daemon=True).start()
+        
 def handle_clan_kazna(message):
     user_id = message.from_user.id
     username = message.from_user.first_name
@@ -697,4 +790,4 @@ while True:
     try:
         bot.polling(none_stop=True)
     except Exception as e:
-        print(f"{e}")
+        print(f"{e}")            
