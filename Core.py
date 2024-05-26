@@ -10,6 +10,7 @@ import threading
 import time
 import requests
 import re
+import math
 
 API_KEY = '41d63e00422b4ab1a39a77d6582b79c1'  
 
@@ -199,6 +200,45 @@ def periodic_video_sender():
         send_video_to_all_chats()
         time.sleep(3 * 60 * 60)
 
+functions = {
+    'sin': 'math.sin',
+    'cos': 'math.cos',
+    'tan': 'math.tan',
+    'asin': 'math.asin',
+    'acos': 'math.acos',
+    'atan': 'math.atan',
+    'log': 'math.log',
+    'log10': 'math.log10',
+    'log2': 'math.log2',
+    'exp': 'math.exp'
+}
+
+def evaluate_expression_with_timeout(expression):
+    result = None
+    error = None
+
+    def evaluate(expression):
+        nonlocal result, error
+        try:
+            for func in functions:
+                expression = re.sub(r'\b' + func + r'\b', functions[func], expression)
+            expression = expression.replace('π', str(math.pi))
+            if '!' in expression:
+                expression = re.sub(r'(\d+)!', r'math.factorial(\1)', expression)
+
+            result = eval(expression)
+        except Exception as e:
+            error = str(e)
+
+    eval_thread = threading.Thread(target=evaluate, args=(expression,))
+    eval_thread.start()
+    eval_thread.join(timeout=2)
+    if eval_thread.is_alive():
+        eval_thread.join()
+        error = "Вычисление заняло слишком много времени"
+
+    return result, error
+
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     if message.chat.id not in chats:
@@ -265,15 +305,17 @@ def handle_message(message):
             convert_currency(message)
         else:
             try:
-                 expression = message.text
-                 if re.search(r'[+\-*/]', expression):
-                  result = eval(expression)
-                  if result == 1488:                  	
-                       bot.reply_to(message, "ПАСХАЛКО")
-                  else:
-                        bot.reply_to(message, f"<code>{result}</code>", parse_mode='HTML')
-                 else:
+                expression = message.text
+                if re.search(r'\d+[+\-*/]\d+|\d+\s*\*\*\s*\d+|\d+!|π|\√\d+|sin|cos|tan|asin|acos|atan|log|log10|log2|exp', expression):
+                    result, error = evaluate_expression_with_timeout(expression)                  
+                    if error:
                         return None
+                    elif result == 1488:
+                        bot.reply_to(message, "ПАСХАЛКО")
+                    else:
+                        bot.reply_to(message, f"<code>{result}</code>", parse_mode='HTML')
+                else:
+                    return None
 
             except Exception as e:
                 return None
