@@ -16,7 +16,7 @@ API_KEY = '41d63e00422b4ab1a39a77d6582b79c1'
 
 moscow_tz = pytz.timezone('Europe/Moscow')
 
-TOKEN = '6775251060:AAFhio2O5X19pfmI858j8mOhmoWKkchwZpM'
+TOKEN = '6775251060:AAHhCP8xFwXy8sQlGZ6CsV3rER-5Sh_qcBs'
 bot = telebot.TeleBot(TOKEN)
 
 BASE_URL = 'https://openexchangerates.org/api/'
