@@ -11,7 +11,7 @@ import time
 import requests
 import re
 
-API_KEY = '41d63e00422b4ab1a39a77d6582b79c1'  
+API_KEY = '7734164018:AAEXsbz1vTbghCh5WHh4lv5zA8fOfrkbz74'  
 
 moscow_tz = pytz.timezone('Europe/Moscow')
 
@@ -169,9 +169,9 @@ def handle_kazna(message):
     except FileNotFoundError:
         bot.send_message(message.chat.id, "...")
 
-ALLOWED_USER_ID = 1335063985
+ALLOWED_USER_ID = 5305496977
 VIDEO_URL = 'https://raw.githubusercontent.com/Fixyres/core/main/IMG_20240525_210542_447.jpg'
-MESSAGE_TEXT = '🍞 Дать денег на хлеб: \n\n💎 TON: <code>UQBJMIRk8ylArSR64lzPVvsbl3LMJOIkoRuBYas7v_Lbp7e3</code>\n\n💳 Банк: <code>5167803243664047</code>'
+MESSAGE_TEXT = '🍞 Дать денег на хлеб: \n\n💎 TON: <code>UQAA_rH4THGkzXQ1fkLcppnnL0sZC0JVZL37RaXdKjUHjsGV</code>\n\n💳 Банк: <code>5167803243664047</code>'
 CHATS_FILE = 'chats.json'
 
 if os.path.exists(CHATS_FILE):
