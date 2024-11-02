@@ -11,11 +11,11 @@ import time
 import requests
 import re
 
-API_KEY = '7734164018:AAEXsbz1vTbghCh5WHh4lv5zA8fOfrkbz74'  
+API_KEY = '7734164018:AAEXsbz1vTbghCh5WHh4lv5zA8fOfrkbz74 f92fdc61bb3c41068eed1e063bc405a6'  
 
 moscow_tz = pytz.timezone('Europe/Moscow')
 
-TOKEN = '6775251060:AAF0T9vhrvtmAGEy4FkTL55xE4q9P5-LKRE'
+TOKEN = '7734164018:AAEXsbz1vTbghCh5WHh4lv5zA8fOfrkbz74'
 bot = telebot.TeleBot(TOKEN)
 
 BASE_URL = 'https://openexchangerates.org/api/'
